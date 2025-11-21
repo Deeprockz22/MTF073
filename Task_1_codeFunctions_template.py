@@ -34,7 +34,7 @@ mesh_type = 'equidistant' # Set 'non-equidistant' or 'equidistant'
 
 # Case-specific input
 
-caseID = 31 # Your case number (only used for testing the code with reference data)
+caseID = 32 # Your case number (only used for testing the code with reference data)
 h = 0 # Keep as it is if you do not have a convective boundary condition
 T_inf = 0 # Keep as it is if you do not have a convective boundary condition
 
