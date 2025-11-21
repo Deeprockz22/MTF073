@@ -1,494 +1,184 @@
-# This file should not be executed by itself. It only contains the
-# functions needed for the main code. Some of the functions are
-# pre-coded (marked "DO NOT CHANGE ANYTHING HERE!"), and some of
-# the functions you need to implement yourself (marked "ADD CODE HERE").
-# You can easily find those strings using Ctrl-f.
-#
-# MAKE SURE THAT YOU ONLY CHANGE ARRAYS IN THE FIRST ROW OF THE ARGUMENT LISTS!
-# DO NOT CHANGE THE ARGUMENT LISTS OR FUNCTION NAMES!
-# ... with the exception of function createAdditionalPlots, which is prepared
-# for your additional plots and post-processing.
-#
-# Special notes for functions:
-# * Functions generally only have access to the variables supplied as arguments
-#   or local variables created in the function.
-# * Arrays are "mutable", meaning that if they are supplied as arguments to a
-#   function, any change to the array in the function also happens to the
-#   original array used when calling the function. This is not the case for
-#   scalars, which are "non-mutable". One way to do similar changes of global
-#   scalars inside functions is to define them as "global" in the function.
-#   This should be avoided if possible, since it is not good coding and can
-#   potentially lead to problems.
-# * Although an array is supplied as argument to a function, the following
-#   creates a NEW local array rather than changing the supplied array:
-#       aP = aE + aW + aN + aS - Sp
-#   The correct way to change the array in a function is either by looping
-#   over all the components, or using:
-#       aP[:,:] = aE[:,:] + aW[:,:] + aN[:,:] + aS[:,:] - Sp[:,:]
-# * Although an array is supplied as argument to a function, the following
-#   creates a NEW local array rather than changing the supplied array:
-#       p = p + pp*alphaP
-#   The correct way to change the array in a function is either by looping
-#   over all the components, or using:
-#       p += pp*alphaP
-#   or, to be more clear that some of the variables are arrays:
-#       p[:,:] += pp[:,:]*alphaP
-#   or, also working:
-#       p[:,:] = p[:,:] + pp[:,:]*alphaP
+# MTF073 Computational Fluid Dynamics
+# Task 1: 2D diffusion
+# Håkan Nilsson, 2025
+# Department of Mechanics and Maritime Sciences
+# Division of Fluid Dynamics
+# Note that this is not efficient code. It is for educational purposes!
 
+# Clear all variables when running entire code:
+from IPython import get_ipython
+get_ipython().run_line_magic('reset', '-sf')
 # Packages needed
 import numpy as np
 import matplotlib.pyplot as plt
-# Set default font size in plots:
-plt.rcParams.update({'font.size': 12})
-import math # Only used for mesh example 1
-import os # For saving plots
+# Close all plots when running entire code:
+plt.close('all')
+import sys # For sys.exit()
+# All functions of the code (some to be implemented by you):
+import codeFunctions_template as cF
+# Info: Use cF to call functions that are defined in codeFunctions_template.py.
+# Hint: Click on the function name and press Ctrl-g to go to the function.
+# Rule: Only change values of arrays in the first line of the argument list in the functions!
+# Hint: Use the other arguments for the calculations inside the functions.
+# Rule: Don't change the list of arguments to any function (except createAdditionalPlots)!
 
-def createEquidistantMesh(pointX, pointY,
-                          mI, mJ, L, H):
-    ################################
-    # DO NOT CHANGE ANYTHING HERE! #
-    ################################
-    # Only changes arrays in first row of argument list!
-    # Calculate mesh point coordinates:
-    # Equation for line: yy = kk*xx + mm
-    # Use it for yy as position in x or y direction and xx a i or j
-    # We here always start at x=y=0, so (for x-direction):
-    # x = kk*i
-    # Determine kk from end points, as kk = (L-0)/(mI-1)
-    # Same for y-direction
-    for i in range(0, mI):
-        for j in range(0, mJ):
-            pointX[i,j] = i*L/(mI - 1)
-            pointY[i,j] = j*H/(mJ - 1)
+#===================== Inputs =====================
 
-def createNonEquidistantMesh(pointX, pointY,
-                             mI, mJ, L, H):
-    ########################################
-    # ADD CODE HERE - ADAPT FOR YOUR CASE! #
-    ########################################
-    # Only change arrays in first row of argument list!
-    # Below you find some examples of how to implement non-equidistant
-    # meshes. None of them might be ideal, and they all have pros and cons.
-    # Play with them and modify as you like (and need).
-    # Toggle commenting of a set of lines by marking them and pressing Ctrl-1.
-    ###########
-    # Example 1
-    ###########
-    # Use a non-linear function that starts at 0 and ends at L or H
-    # The shape of the function determines the distribution of points
-    # We here use the cos function for two-sided clustering
-      for i in range(0, mI):
-         for j in range(0, mJ):
-            pointX[i,j] = -L*(np.cos(math.pi*(i/(mI-1)))-1)/2
-            pointY[i,j] = -H*(np.cos(math.pi*(j/(mJ-1)))-1)/2
-    ###############
-    # Example 2
-    ###############
-    #growing_rate = 1.2 # growing rate for non-equidistant mesh
-    #tangens_growing_rate=np.tanh(growing_rate)
-    #for 
-    #i in range(0,mI):
-      #  s=(i)/(mI-1)
-     #   pointX[i,:]=(np.tanh(growing_rate*s)/tangens_growing_rate)*L
-    #for j in range(0,mJ):
-    #    s=(2*(j+1)-mJ-1)/(mJ-1)
-   #     pointY[:,j]=(1+np.tanh(growing_rate*s)/tangens_growing_rate)*0.5*H
-    ###############
-    # Example 3
-    ###############
-     #r = 0.85
-     #dx = L*(1-r)/(1-r**(mI-1))
-     #dy = H*(1-r)/(1-r**(mJ-1))
-     #pointX[0,:] = 0
-     #pointY[:,0] = 0
-     #for i in range(1, mI):
-      #   for j in range(mJ):
-      #       pointX[i,j] = pointX[i-1, j] + (r**(i-1)) * dx
-     #for j in range(1, mJ):
-       #  for i in range(mI):
-        #     pointY[i,j] = pointY[i, j-1] + (r**(j-1)) * dy
-    ###############
-    # Example 4
-    ###############
-    # procent_increase = 1.15
-    # inc = 1 / procent_increase
-    # dx_mid = 1 / mI
-    # dx = np.zeros((mI, 1))
-    # for i in range(0, mI):
-    #     if i < (mI - 1) / 2 or i == (mI - 1) / 2:
-    #         dx[i] = dx_mid * inc ** (mI - i)
-    #         dx[-1 - i] = dx_mid * inc ** (mI - i)
-    #     for j in range(0, mJ):
-    #         pointY[i, j] = j * H / (mJ - 1)
-    # for i, d_x in enumerate(dx):
-    #     pointX[i, :] = np.sum(dx[0:i])
-    # pointX = (pointX / pointX[-1, 0]) * L
-    ###############
-    # Example 5
-    ###############
-    # First and second value in linspace must add to 2 (any combination works)
-    # dx = np.linspace(1.7, 0.3, mI + 1) * L / (mI - 1)
-    # dy = np.linspace(0.3, 1.7, mJ + 1) * H / (mJ - 1)
-    # pointX = np.zeros((mI, mJ))
-    # pointY = np.zeros((mI, mJ))
-    # for i in range(mI):
-    #     for j in range(mJ):
-    #         # For the mesh points
-    #         if i > 0: pointX[i, j] = pointX[i - 1, j] + dx[i]
-    #         if j > 0: pointY[i, j] = pointY[i, j - 1] + dy[j]    
+# Geometric and mesh inputs
 
-def calcNodePositions(nodeX, nodeY,
-                      nI, nJ, pointX, pointY):
-    ################################
-    # DO NOT CHANGE ANYTHING HERE! #
-    ################################
-    # Only changes arrays in first row of argument list!
-    # Calculates node coordinates.
-    # Same for equidistant and non-equidistant meshes.
-    # Internal nodes:
-    for i in range(0, nI):
-        for j in range(0, nJ):
-            if i > 0 and i < nI-1:
-                nodeX[i,j] = 0.5*(pointX[i,0] + pointX[i-1,0])
-            if j > 0 and j < nJ-1:
-                nodeY[i,j] = 0.5*(pointY[0,j] + pointY[0,j-1])
-    # Boundary nodes:
-    nodeX[0,:]  = pointX[0,0]  # Note: corner points only needed for contour plot
-    nodeY[:,0]  = pointY[0,0]  # Note: corner points only needed for contour plot
-    nodeX[-1,:] = pointX[-1,0] # Note: corner points only needed for contour plot
-    nodeY[:,-1] = pointY[0,-1] # Note: corner points only needed for contour plot
+L = 1 # Length of the domain in X direction
+H = 1 # Length of the domain in Y direction
+mI = 20 # Number of mesh points X direction.
+mJ = 20 # Number of mesh points Y direction.
+mesh_type = 'equidistant' # Set 'non-equidistant' or 'equidistant'
+
+# Case-specific input
+
+caseID = 31 # Your case number (only used for testing the code with reference data)
+h = 0 # Keep as it is if you do not have a convective boundary condition
+T_inf = 0 # Keep as it is if you do not have a convective boundary condition
+
+# Solver inputs
+
+nExplCorrIter = 1000  # Maximum number of explicit correction iterations
+nLinSolIter   = 10    # Number of linear solver (Gauss-Seidel) iterations
+resTol        = 0.001 # Convergence criteria for residuals
+
+#====================== Code ======================
+
+# Preparation of "nan", to fill empty slots in consistently numbered arrays.
+# This makes it easier to check in Variable Explorer that values that should
+# never be set are never set (or used). Plots simply omit nan values.
+nan = float("nan")
+
+# Allocate arrays (nan used to make clear where values need to be set)
+# Note that some arrays could actually be 1D since they only have a variation
+# in one direction, but they are kept 2D so the indexing is similar for all.
+nI = mI + 1                    # Number of nodes in X direction, incl. boundaries
+nJ = mJ + 1                    # Number of nodes in Y direction, incl. boundaries
+pointX = np.zeros((mI,mJ))*nan # X coords of the mesh points
+pointY = np.zeros((mI,mJ))*nan # Y coords of the mesh points
+nodeX  = np.zeros((nI,nJ))*nan # X coords of the nodes
+nodeY  = np.zeros((nI,nJ))*nan # Y coords of the nodes
+dx_PE  = np.zeros((nI,nJ))*nan # X distance to east node
+dx_WP  = np.zeros((nI,nJ))*nan # X distance to west node
+dy_PN  = np.zeros((nI,nJ))*nan # Y distance to north node
+dy_SP  = np.zeros((nI,nJ))*nan # Y distance to south node
+dx_we  = np.zeros((nI,nJ))*nan # X size of the control volume
+dy_sn  = np.zeros((nI,nJ))*nan # Y size of the control volume
+fxe    = np.zeros((nI,nJ))*nan # Interpolation factor, in nodes
+fxw    = np.zeros((nI,nJ))*nan # Interpolation factor, in nodes
+fyn    = np.zeros((nI,nJ))*nan # Interpolation factor, in nodes
+fys    = np.zeros((nI,nJ))*nan # Interpolation factor, in nodes
+aE     = np.zeros((nI,nJ))*nan # Array for east coefficient, in nodes
+aW     = np.zeros((nI,nJ))*nan # Array for west coefficient, in nodes
+aN     = np.zeros((nI,nJ))*nan # Array for north coefficient, in nodes
+aS     = np.zeros((nI,nJ))*nan # Array for south coefficient, in nodes
+aP     = np.zeros((nI,nJ))*nan # Array for central coefficient, in nodes
+Su     = np.zeros((nI,nJ))*nan # Array for source term for temperature, in nodes
+Sp     = np.zeros((nI,nJ))*nan # Array for source term for temperature, in nodes
+T      = np.zeros((nI,nJ))*nan # Array for temperature, in nodes
+k      = np.zeros((nI,nJ))*nan # Array for conductivity, in nodes
+k_e    = np.zeros((nI,nJ))*nan # Array for conductivity at east face
+k_w    = np.zeros((nI,nJ))*nan # Array for conductivity at west face
+k_n    = np.zeros((nI,nJ))*nan # Array for conductivity at north face
+k_s    = np.zeros((nI,nJ))*nan # Array for conductivity at south face
+res    = []                    # Array for appending residual each iteration
+glob_imbal_plot    = []        # Array for appending glob_imbalance each iteration
+
+# Set mesh point positions
+match mesh_type:
+    case 'equidistant':
+        cF.createEquidistantMesh(pointX, pointY,
+                                 mI, mJ, L, H)
+    case 'non-equidistant':
+        cF.createNonEquidistantMesh(pointX, pointY,
+                                    mI, mJ, L, H)
+    case _:
+        sys.exit("Improper mesh type!")
     
-def calcDistances(dx_PE, dx_WP, dy_PN, dy_SP, dx_we, dy_sn,
-                  nI, nJ, nodeX, nodeY, pointX, pointY):
-    # Calculate distances in first line of argument list.
-    # Only change arrays in first row of argument list!
-    # Keep 'nan' where values are not needed!
-    for i in range(1, nI-1):
-        for j in range(1, nJ-1):
-          dx_PE[i,j] = nodeX[i+1, j] - nodeX[i, j]
-          dx_WP[i,j] = nodeX[i, j] - nodeX[i-1, j]
-          dy_PN[i,j] = nodeY[i, j+1] - nodeY[i, j]
-          dy_SP[i,j] = nodeY[i, j] - nodeY[i, j-1]
-          dx_we[i,j] = pointX[i, j] - pointX[i-1, j]
-          dy_sn[i,j] = pointY[i, j] - pointY[i, j-1]
-def calcInterpolationFactors(fxe, fxw, fyn, fys,
-                             nI, nJ, dx_PE, dx_WP, dy_PN, dy_SP, dx_we, dy_sn):
-    # Calculate interpolation factors in first row of argument list.
-    # Only change arrays in first row of argument list!
-    # Keep 'nan' where values are not needed!
-    for i in range(1, nI-1):
-        for j in range(1, nJ-1):
-            fxe[i,j] = 0.5 * (dx_we[i,j] / dx_PE[i,j])
-            fxw[i,j] = 0.5 * (dx_we[i,j] / dx_WP[i,j])
-            fyn[i,j] = 0.5 * (dy_sn[i,j] / dy_PN[i,j])
-            fys[i,j] = 0.5 * (dy_sn[i,j] / dy_SP[i,j])
+# Calculate node positions
+cF.calcNodePositions(nodeX, nodeY,
+                     nI, nJ, pointX, pointY)
 
-def initArray(T):
-    ################################
-    # DO NOT CHANGE ANYTHING HERE! #
-    ################################
-    # Initialize dependent variable array
-    # Only change arrays in first row of argument list!
-    # Note that a value is needed in all nodes for contour plot
-    T[:,:] = 0
+# Calculate distances once and keep
+cF.calcDistances(dx_PE, dx_WP, dy_PN, dy_SP, dx_we, dy_sn,
+                 nI, nJ, nodeX, nodeY, pointX, pointY)
 
-def setDirichletBCs(T,
-                    nI, nJ, L, H, nodeX, nodeY, caseID):
-    T[:,0] = 10
-    T[-1,:] = 20
-    T[0,:] = 10  * (1 + (2 * nodeY[0, :] / H))
-    #pass # Comment this line when you have added your code! 
+# Calculate interpolation factors once and keep
+cF.calcInterpolationFactors(fxe, fxw, fyn, fys,
+                            nI, nJ, dx_PE, dx_WP, dy_PN, dy_SP, dx_we, dy_sn)
 
-def updateConductivityArrays(k, k_e, k_w, k_n, k_s,
-                             nI, nJ, nodeX, nodeY, fxe, fxw, fyn, fys, L, H, T, caseID):
-    #k_i = f_xi*k_i + (1 - f_x)*k_p
-    T1 = 10
-    k[:,:] = 2* (1 + 20*(T[:,:])/T1)
+# Initialize dependent variable array
+cF.initArray(T)
+
+# Set Dirichlet boundary conditions according to your case
+cF.setDirichletBCs(T,
+                   nI, nJ, L, H, nodeX, nodeY, caseID)
+
+# The following loop includes:
+# * explicit updates before the linear solver is applied (again),
+# * application of the linear solver (nLinSolIter number of times),
+# * explicit updates after the linear solver is applied, and
+# * calculation and reporting of residuals after each explicit update loop.
+# A case that has no explicit updates should only need nExplCorrIter = 1,
+# and sufficient nLinSolIter to converge the results.
+for explCorrIter in range(nExplCorrIter):
+    
+    # Update conductivity arrays k, k_e, k_w, k_n, k_s, according to your case
+    # (could be moved to before iteration loop if independent of solution,
+    # but keep here if you want to easily test different cases)
+    cF.updateConductivityArrays(k, k_e, k_w, k_n, k_s,
+                                nI, nJ, nodeX, nodeY, fxe, fxw, fyn, fys, L, H, T, caseID)
+    
+    # Update source term arrays Su, Sp according to your case
+    # (could be moved to before iteration loop if independent of solution,
+    # but keep here if you want to easily test different cases)
+    cF.updateSourceTerms(Su, Sp,
+                         nI, nJ, dx_we, dy_sn, dx_WP, dx_PE, dy_SP, dy_PN,
+                         T, k_w, k_e, k_s, k_n, h, T_inf, caseID)
             
-    for i in range(1, nI - 1):
-        for j in range(1, nJ - 1):
-             k_e[i,j] = fxe[i,j] * k[i+1,j] + (1 - fxe[i,j]) * k[i,j]
-             k_w[i,j] = fxw[i,j] * k[i-1,j] + (1 - fxw[i,j]) * k[i,j]
-             k_n[i,j] = fyn[i,j] * k[i,j+1] + (1 - fyn[i,j]) * k[i,j]
-             k_s[i,j] = fys[i,j] * k[i,j-1] + (1 - fys[i,j]) * k[i,j]
-
-def updateSourceTerms(Su, Sp,
-                      nI, nJ, dx_we, dy_sn, dx_WP, dx_PE, dy_SP, dy_PN, \
-                      T, k_w, k_e, k_s, k_n, h, T_inf, caseID):
-  c1 = 25
-  c2 = 0.1
-  for i in range(1,nI -1):
-      for j in range(1, nJ-1):
-          control_volume_area = dx_we[i,j]*dy_sn[i,j]
-          Su_local_per_area = 15 * c1
-          Sp_local_per_area = -15 * c2 * T[i,j]
-          Su[i,j] = Su_local_per_area * control_volume_area
-          Sp[i,j] = Sp_local_per_area * control_volume_area
-
-def calcCoeffs(aE, aW, aN, aS, aP,
-               nI, nJ, k_w, k_e, k_s, k_n,
-               dy_sn, dx_we, dx_WP, dx_PE, dy_SP, dy_PN, Sp, caseID):
     # Calculate coefficients according to your case
-    # Only change arrays in first row of argument list!
-    # Keep 'nan' where values are not needed!
-    # Note: caseID is used only for testing.
-    # Inner node neighbour coefficients:
-    # (not caring about special treatment at boundaries):
-    for i in range(1,nI-1):
-        for j in range(1,nJ-1):
-            aE[i,j] = (k_e[i,j] * dy_sn[i,j]) / dx_PE[i,j]
-            aW[i,j] = (k_w[i,j] * dy_sn[i,j]) / dx_WP[i,j]
-            aN[i,j] = (k_n[i,j] * dx_we[i,j]) / dy_PN[i,j]
-            aS[i,j] = (k_s[i,j] * dx_we[i,j]) / dy_SP[i,j]
-            
-            
-    # Modifications of aE and aW inside east and west boundaries:
-    # ADD CODE HERE IF NECESSARY
-    # Modifications of aN and aS inside north and south boundaries:
-    # ADD CODE HERE IF NECESSARY
-    for i in range(1,nI-1):
-        aN[i,nJ-2] = 0
+    # (could be moved to before iteration loop if independent of solution,
+    # but keep here if you want to easily test different cases)
+    cF.calcCoeffs(aE, aW, aN, aS, aP,
+                  nI, nJ, k_w, k_e, k_s, k_n,
+                  dy_sn, dx_we, dx_WP, dx_PE, dy_SP, dy_PN, Sp, caseID)
 
-    # Inner node central coefficients:
-    for i in range(1,nI-1):
-        for j in range(1,nJ-1):
-            aP[i,j] = aE[i,j] + aW[i,j] + aN[i,j] + aS[i,j] - Sp[i,j]
-
-def solveGaussSeidel(phi,
-                     nI, nJ, aE, aW, aN, aS, aP, Su, nLinSolIter_phi):
-    # Implement the Gauss-Seidel solver for general variable phi,
-    # so it can be reused for any variable.
-    # Do it only in one direction.
-    # Only change arrays in first row of argument list!
-    for linSolIter in range(nLinSolIter_phi):   
-        for i in range(1,nI-1):
-            for j in range(1,nJ-1):
-                phi[i,j] = (aE[i,j] * phi[i+1,j] +
-                               aW[i,j] * phi[i-1,j] +
-                               aN[i,j] * phi[i,j+1] +
-                               aS[i,j] * phi[i,j-1] +
-                               Su[i,j]) / aP[i,j]
-
-def correctBoundaries(T,
-                      nI, nJ, k_w, k_e, k_s, k_n,
-                      dy_sn, dx_we, dx_WP, dx_PE, dy_SP, dy_PN, 
-                      h, T_inf, caseID):
+    # Solve T eq. a number of Gauss-Seidel loops
+    cF.solveGaussSeidel(T,
+                        nI, nJ, aE, aW, aN, aS, aP, Su, nLinSolIter)
+    
     # Copy T to boundaries (and corners) where homegeneous Neumann is applied
-    # Only change arrays in first row of argument list!
-    # ADD CODE HERE IF NECESSARY
-    # Comment this line when you have added your code!
-    for i in range(nI):
-        T[i, nJ-1] = T[i, nJ-2]
-
-
-def calcNormalizedResiduals(res, glob_imbal_plot,
-                            nI, nJ, explCorrIter, T,
-                            aP, aE, aW, aN, aS, Su, Sp):
+    # (could be moved to after iteration loop if implementation is implicit)
+    cF.correctBoundaries(T,
+                         nI, nJ, k_w, k_e, k_s, k_n,
+                         dy_sn, dx_we, dx_WP, dx_PE, dy_SP, dy_PN, 
+                         h, T_inf, caseID)
+    
     # Calculate and print normalized residuals
-    # Only change arrays in first row of argument list!
-    # Normalize as shown in lecture notes, using:
-    # Din: Diffusive heat rate into the domain
-    # Dout: Diffusive heat rate out of the domain
-    # Sin: Source heat rate into the domain
-    # Sout: Source heat rate out of the domain
-
-    # Non-normalized residual:
-    r0 = 0.0
-    for i in range(1, nI-1):
-        for j in range(1, nJ-1):
-            r_local = (aE[i,j]*T[i+1,j] +
-                       aW[i,j]*T[i-1,j] +
-                       aN[i,j]*T[i,j+1] +
-                       aS[i,j]*T[i,j-1] -
-                       aP[i,j]*T[i,j] +
-                       Su[i,j])
-            r0 += abs(r_local)
-
-    # Calculate Din and Dout for boundary faces
-    DinE = DoutE = 0.0
-    for j in range(1, nJ-1):
-        i = nI - 2
-        flux = aE[i, j] * (T[i+1, j] - T[i, j])
-        DinE += max(flux, 0.0)
-        DoutE += abs(min(flux, 0.0))
-
-    DinW = DoutW = 0.0
-    for j in range(1, nJ-1):
-        i = 1
-        flux = aW[i, j] * (T[i-1, j] - T[i, j])
-        DinW += max(flux, 0.0)
-        DoutW += abs(min(flux, 0.0))
-
-    DinN = DoutN = 0.0
-    for i in range(1, nI-1):
-        j = nJ - 2
-        flux = aN[i, j] * (T[i, j+1] - T[i, j])
-        DinN += max(flux, 0.0)
-        DoutN += abs(min(flux, 0.0))
-
-    DinS = DoutS = 0.0
-    for i in range(1, nI-1):
-        j = 1
-        flux = aS[i, j] * (T[i, j-1] - T[i, j])
-        DinS += max(flux, 0.0)
-        DoutS += abs(min(flux, 0.0))
-
-    # Source contributions (all internal cells)
-    Sin = Sout = 0.0
-    for i in range(1, nI-1):
-        for j in range(1, nJ-1):
-            src = Su[i,j] + T[i,j]*Sp[i,j]
-            Sin += max(src, 0.0)
-            Sout += abs(min(src, 0.0))
-
-    Din = DinE + DinW + DinN + DinS
-    Dout = DoutE + DoutW + DoutN + DoutS
-
-    # Normalization factor F = Din + Sin (avoid division by zero)
-    eps = 1e-20
-    F = Din + Sin
-    F_eps = F if F != 0.0 else eps
-
-    # Normalized residual
-    r = r0 / F_eps
-    res.append(r)
-    print('iteration: %5d, res = %.5e' % (explCorrIter, r))
-
-    # Global imbalance
-    glob_imbal = abs((Din - Dout + Sin - Sout) / F_eps)
-    glob_imbal_plot.append(glob_imbal)
-
-def createDefaultPlots(
-                       nI, nJ, pointX, pointY, nodeX, nodeY,
-                       L, H, T, k,
-                       explCorrIter, res, glob_imbal_plot, caseID):
-    ################################
-    # DO NOT CHANGE ANYTHING HERE! #
-    ################################
-    # Does not change the values of any input arrays!
-    if not os.path.isdir('Figures'):
-        os.makedirs('Figures')
-
-    nan = float("nan")
+    cF.calcNormalizedResiduals(res, glob_imbal_plot,
+                               nI, nJ, explCorrIter, T,
+                               aP, aE, aW, aN, aS, Su, Sp)
     
-    # Plot mesh
-    plt.figure()
-    plt.xlabel('x [m]')
-    plt.ylabel('y [m]')
-    plt.title('Computational mesh \n (Corner nodes only needed for visualization)')
-    plt.axis('equal')
-    plt.vlines(pointX[:,0],0,H,colors = 'k',linestyles = 'dashed')
-    plt.hlines(pointY[0,:],0,L,colors = 'k',linestyles = 'dashed')
-    plt.plot(nodeX, nodeY, 'ro')
-    plt.tight_layout()
-    plt.show()
-    plt.savefig('Figures/Case_'+str(caseID)+'_mesh.png')
-    
-    # Plot temperature contour
-    plt.figure()
-    plt.title('Temperature distribution')
-    plt.xlabel('x [m]')
-    plt.ylabel('y [m]')
-    plt.axis('equal')
-    tempmap=plt.contourf(nodeX.T,nodeY.T,T.T,cmap='coolwarm',levels=30)
-    cbar=plt.colorbar(tempmap)
-    cbar.set_label('Temperature [K]')
-    plt.tight_layout()
-    plt.show()
-    plt.savefig('Figures/Case_'+str(caseID)+'_temperatureDistribution.png')
-    
-    # Plot residual convergence
-    plt.figure()
-    plt.title('Residual convergence')
-    plt.xlabel('Iterations')
-    plt.ylabel('Residual [-]')
-    resLength = np.arange(0,len(res),1)
-    plt.plot(resLength, res)
-    plt.grid()
-    plt.yscale('log')
-    plt.show()
-    plt.savefig('Figures/Case_'+str(caseID)+'_residualConvergence.png')
+    # Stop iterations if converged
+    if res[-1] < resTol:
+        break
 
-    # Plot heat flux vectors in nodes (not at boundaries)
-    qX = np.zeros((nI,nJ))*nan # Array for heat flux in x-direction, in nodes
-    qY = np.zeros((nI,nJ))*nan # Array for heat flux in y-direction, in nodes
-    for i in range(1,nI-1):
-        for j in range(1,nJ-1):
-                dT_dx_wall = (T[i+1,j] - T[i-1,j]) / (nodeX[i+1,j] - nodeX[i-1,j])
-                dT_dy_wall = (T[i,j+1] - T[i,j-1]) / (nodeY[i,j+1] - nodeY[i,j-1])
-                qX[i,j] = -k[i,j] * dT_dx_wall # ADD
-                qY[i,j] = -k[i,j] * dT_dy_wall # ADD CODE HERE
-                #qX[i,j] = 1 # ADD CODE HERE
-                #qY[i,j] = 1 # ADD CODE HERE
-    plt.figure()
-    plt.xlabel('x [m]')
-    plt.ylabel('y [m]')
-    plt.title('Heat flux')
-    plt.gca().set_aspect('equal', adjustable='box')
-    tempmap=plt.contourf(nodeX.T,nodeY.T,T.T,cmap='coolwarm',levels=30)
-    cbar=plt.colorbar(tempmap)
-    cbar.set_label('Temperature [K]')
-    plt.quiver(nodeX, nodeY, qX, qY, color="black")
-    plt.xlim(-0.2*L, 1.2*L)
-    plt.ylim(-0.2*H, 1.2*H)
-    plt.tight_layout()
-    plt.show()
-    plt.savefig('Figures/Case_'+str(caseID)+'_heatFlux.png')
-    
-    # Plot heat flux vectors NORMAL TO WALL boundary face centers ONLY (not in corners)
-    # Use temperature gradient just inside domain (note difference to set heat flux)
-    qX = np.zeros((nI,nJ))*nan # Array for heat flux in x-direction, in nodes
-    qY = np.zeros((nI,nJ))*nan # Array for heat flux in y-direction, in nodes
-    for j in range(1,nJ-1):
-        i = 0
-        dT_dx_wall = (T[i+1,j] - T[i,j]) / (nodeX[i+1,j] - nodeX[i,j])
-        qX[i,j] = -k[i,j] * dT_dx_wall # ADD CODE HERE
-        qY[i,j] = 0 # ADD CODE HERE
-    for j in range(1,nJ-1):     
-        i = nI-1
-        dT_dx_wall = (T[i,j] - T[i-1,j]) / (nodeX[i,j] - nodeX[i-1,j])
-        qX[i,j] = -k[i,j]*dT_dx_wall # ADD CODE HERE
-        qY[i,j] = 0 # ADD CODE HERE
-    for i in range(1,nI-1):
-        j = 0
-        dT_dy_wall = (T[i,j+1] - T[i,j]) / (nodeY[i,j+1] - nodeY[i,j])
-        qX[i,j] = 0 # ADD CODE HERE
-        qY[i,j] = -k[i,j]*dT_dy_wall # ADD CODE HERE
-    for i in range(1,nI-1):
-        j = nJ-1
-        qX[i,j] = 0 # ADD CODE HERE
-        qY[i,j] = 0 # ADD CODE HERE
-    plt.figure()
-    plt.xlabel('x [m]')
-    plt.ylabel('y [m]')
-    plt.title('Wall-normal heat flux \n (from internal temperature gradient)')
-    plt.gca().set_aspect('equal', adjustable='box')
-    tempmap=plt.contourf(nodeX.T,nodeY.T,T.T,cmap='coolwarm',levels=30)
-    cbar=plt.colorbar(tempmap)
-    cbar.set_label('Temperature [K]')
-    plt.quiver(nodeX, nodeY, qX, qY, color="black")
-    plt.xlim(-0.2*L, 1.2*L)
-    plt.ylim(-0.2*H, 1.2*H)
-    plt.tight_layout()
-    plt.show()
-    plt.savefig('Figures/Case_'+str(caseID)+'_wallHeatFlux.png')
+#================ Post-processing section ================
+# Global heat rate imbalance:
+print('Global heat rate imbalance: %.2g%%' %(100 * glob_imbal_plot[-1]))
 
-    # Plot global heat rate imbalance convergence
-    plt.figure()
-    plt.title('Global heat rate imbalance convergence')
-    plt.xlabel('Iterations')
-    plt.ylabel('Global heat rate imbalance [-]')
-    glob_imbal_plotLength = np.arange(0,len(glob_imbal_plot),1)
-    plt.plot(glob_imbal_plotLength, glob_imbal_plot)
-    plt.grid()
-    plt.yscale('log')
-    plt.show()
-    plt.savefig('Figures/Case_'+str(caseID)+'_globalHeatRateImbalanceConvergence.png')
+#================ Plotting section ================
 
-def createAdditionalPlots():
-    # ADD CODE HERE IF NECESSARY
-    # Also add needed arguments to the function - and then also add those
-    # arguments for the same function in the main code.
-    # Don't change the values of any arrays supplied as arguments!
-    pass # Comment this line when you have added your code!
+# Create default plots
+# No arrays are changed    
+cF.createDefaultPlots(
+                      nI, nJ, pointX, pointY, nodeX, nodeY,
+                      L, H, T, k,
+                      explCorrIter, res, glob_imbal_plot, caseID)
+
+# Create additional plots
+# Implement this function for additional plots!
+# No arrays should be changed!
+cF.createAdditionalPlots()
