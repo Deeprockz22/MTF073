@@ -44,6 +44,11 @@ plt.rcParams.update({'font.size': 12})
 import math # Only used for mesh example 1
 import os # For saving plots
 
+# Add module-level history for normalization factor F (saved each iteration)
+F_history = []
+# Save temperature at a representative internal point (center) per iteration
+T_point_history = []
+
 def createEquidistantMesh(pointX, pointY,
                           mI, mJ, L, H):
     ################################
@@ -283,82 +288,100 @@ def correctBoundaries(T,
 
 
 def calcNormalizedResiduals(res, glob_imbal_plot,
-                            nI, nJ, explCorrIter, T,
+                            nI, nJ, explCorrIter, T, \
                             aP, aE, aW, aN, aS, Su, Sp):
-    # Calculate and print normalized residuals
+    # Calculate and print normalized residuals, and sane 
     # Only change arrays in first row of argument list!
     # Normalize as shown in lecture notes, using:
-    # Din: Diffusive heat rate into the domain
-    # Dout: Diffusive heat rate out of the domain
-    # Sin: Source heat rate into the domain
-    # Sout: Source heat rate out of the domain
-
+    #   Din: Diffusive heat rate into the domain
+    #   Dout: Diffusive heat rate out of the domain
+    #   Sin: Source heat rate into the domain
+    #   Sout: Source heat rate out of the domain
     # Non-normalized residual:
-    r0 = 0.0
-    for i in range(1, nI-1):
-        for j in range(1, nJ-1):
-            r_local = (aE[i,j]*T[i+1,j] +
-                       aW[i,j]*T[i-1,j] +
-                       aN[i,j]*T[i,j+1] +
-                       aS[i,j]*T[i,j-1] -
-                       aP[i,j]*T[i,j] +
-                       Su[i,j])
-            r0 += abs(r_local)
-
-    # Calculate Din and Dout for boundary faces
-    DinE = DoutE = 0.0
-    for j in range(1, nJ-1):
-        i = nI - 2
-        flux = aE[i, j] * (T[i+1, j] - T[i, j])
-        DinE += max(flux, 0.0)
-        DoutE += abs(min(flux, 0.0))
-
-    DinW = DoutW = 0.0
-    for j in range(1, nJ-1):
+    r0 = 0
+    for i in range(1,nI-1):
+        for j in range(1,nJ-1):
+            # ADD CODE HERE
+            r0 += abs(aE[i,j]*T[i+1,j] + aW[i,j]*T[i-1,j] + aN[i,j]*T[i,j+1] 
+                      + aS[i,j]*T[i,j-1] - aP[i,j]*T[i,j] + Su[i,j])
+    # Calculate normalization factor as
+    # F =  Din + Sin
+    # Din and Dout
+    # East boundary cells
+    DinE = 0
+    DoutE = 0
+    for j in range(1,nJ-1):
+        i = nI-2
+        DinE +=      max(aE[i, j]*(T[i+1,j]-T[i,j]),0)
+        DoutE += abs(min(aE[i, j]*(T[i+1,j]-T[i,j]),0))   
+    # West boundary cells
+    DinW = 0
+    DoutW = 0
+    for j in range(1,nJ-1):
         i = 1
-        flux = aW[i, j] * (T[i-1, j] - T[i, j])
-        DinW += max(flux, 0.0)
-        DoutW += abs(min(flux, 0.0))
-
-    DinN = DoutN = 0.0
-    for i in range(1, nI-1):
-        j = nJ - 2
-        flux = aN[i, j] * (T[i, j+1] - T[i, j])
-        DinN += max(flux, 0.0)
-        DoutN += abs(min(flux, 0.0))
-
-    DinS = DoutS = 0.0
-    for i in range(1, nI-1):
+        DinW +=      max(aW[i, j]*(T[i-1,j]-T[i,j]),0)
+        DoutW += abs(min(aW[i, j]*(T[i-1,j]-T[i,j]),0))
+    # North boundary cells
+    DinN = 0
+    DoutN = 0
+    for i in range(1,nI-1):
+        j = nJ-2
+        DinN +=      max(aN[i, j]*(T[i,j+1]-T[i,j]),0)
+        DoutN += abs(min(aN[i, j]*(T[i,j+1]-T[i,j]),0))  
+    # South boundary cells
+    DinS = 0
+    DoutS = 0
+    for i in range(1,nI-1):
         j = 1
-        flux = aS[i, j] * (T[i, j-1] - T[i, j])
-        DinS += max(flux, 0.0)
-        DoutS += abs(min(flux, 0.0))
-
-    # Source contributions (all internal cells)
-    Sin = Sout = 0.0
-    for i in range(1, nI-1):
-        for j in range(1, nJ-1):
-            src = Su[i,j] + T[i,j]*Sp[i,j]
-            Sin += max(src, 0.0)
-            Sout += abs(min(src, 0.0))
-
+        DinS +=      max(aS[i, j]*(T[i,j-1]-T[i,j]),0)
+        DoutS += abs(min(aS[i, j]*(T[i,j-1]-T[i,j]),0))
+    # Sin and Sout - all cells
+    Sin = 0
+    Sout = 0
+    for i in range(1,nI-1):
+        for j in range(1,nJ-1):
+            Sin +=      max(Su[i,j]+T[i,j]*Sp[i,j],0)
+            Sout += abs(min(Su[i,j]+T[i,j]*Sp[i,j],0))
     Din = DinE + DinW + DinN + DinS
-    Dout = DoutE + DoutW + DoutN + DoutS
-
-    # Normalization factor F = Din + Sin (avoid division by zero)
-    eps = 1e-20
     F = Din + Sin
-    F_eps = F if F != 0.0 else eps
 
-    # Normalized residual
-    r = r0 / F_eps
+    # Save F for post-processing / plotting
+    F_history.append(F)
+    
+    # Save temperature at domain center (or nearest internal point) for post-processing / plotting
+    try:
+        i_c = nI // 2
+        j_c = nJ // 2
+        # ensure an internal index (avoid boundaries)
+        if i_c == 0: i_c = 1
+        if i_c == nI-1: i_c = nI-2
+        if j_c == 0: j_c = 1
+        if j_c == nJ-1: j_c = nJ-2
+        T_point_history.append(float(T[i_c, j_c]))
+    except Exception:
+        # ignore if something unexpected occurs (keeps function robust)
+        pass
+
+    # Calculate normalized residual (guard against division by zero)
+    if F != 0:
+        r = r0 / F
+    else:
+        r = 0.0
+
+    # Append residual at present iteration to list of all residuals, for plotting:
     res.append(r)
     print('iteration: %5d, res = %.5e' % (explCorrIter, r))
-
-    # Global imbalance
-    glob_imbal = abs((Din - Dout + Sin - Sout) / F_eps)
+    # Calculate the global imbalance as
+    # glob_imbal = abs((Din - Dout + Sin - Sout)/(Din + Sin))
+    Dout = DoutE + DoutW + DoutN + DoutS
+    if (Din + Sin) != 0:
+        glob_imbal = abs((Din - Dout + Sin - Sout)/(Din + Sin))
+    else:
+        glob_imbal = 0.0
     glob_imbal_plot.append(glob_imbal)
 
+    # Return F for convenience (caller may ignore)
+    return F
 def createDefaultPlots(
                        nI, nJ, pointX, pointY, nodeX, nodeY,
                        L, H, T, k,
@@ -485,6 +508,40 @@ def createDefaultPlots(
     plt.yscale('log')
     plt.show()
     plt.savefig('Figures/Case_'+str(caseID)+'_globalHeatRateImbalanceConvergence.png')
+
+    # Plot F (normalization factor) vs iterations if available
+    try:
+        if len(F_history) > 0:
+            F_arr = np.asarray(F_history, dtype=float)
+            plt.figure()
+            plt.title('Normalization factor F vs Iterations')
+            plt.xlabel('Iteration')
+            plt.ylabel('F (Total heat inflow)')
+            plt.plot(np.arange(len(F_arr)), F_arr, marker='o', linestyle='-')
+            plt.grid(True)
+            plt.tight_layout()
+            plt.show()
+            plt.savefig('Figures/Case_'+str(caseID)+'_F_vs_iterations.png')
+    except NameError:
+        # F_history not defined -> nothing to plot
+        pass
+
+    # Plot temperature at center vs iterations if available
+    try:
+        if len(T_point_history) > 0:
+            T_arr = np.asarray(T_point_history, dtype=float)
+            plt.figure()
+            plt.title('Temperature at center vs Iterations')
+            plt.xlabel('Iteration')
+            plt.ylabel('Temperature [K]')
+            plt.plot(np.arange(len(T_arr)), T_arr, marker='o', linestyle='-')
+            plt.grid(True)
+            plt.tight_layout()
+            plt.show()
+            plt.savefig('Figures/Case_'+str(caseID)+'_Tcenter_vs_iterations.png')
+    except NameError:
+        # T_point_history not defined -> nothing to plot
+        pass
 
 def createAdditionalPlots():
     # ADD CODE HERE IF NECESSARY
