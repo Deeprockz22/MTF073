@@ -44,6 +44,28 @@ This repository contains comprehensive study notes for **MTF073 Computational Fl
 
 ### Master Summary:
 - **[MASTER_EXAM_SUMMARY.md](Notes/MASTER_EXAM_SUMMARY.md)** - Quick reference guide with all critical topics
+- **[REPEATED_QUESTIONS_ANALYSIS.md](Notes/REPEATED_QUESTIONS_ANALYSIS.md)** - ⚡ Analysis of repeated questions (2020-2025)
+
+---
+
+## ⚡ REPEATED QUESTIONS DISCOVERED!
+
+### 🚨 **Major Finding: Significant Question Repetition**
+
+Analysis reveals **11 major question patterns** that repeat across years:
+
+**Top 5 Most Repeated:**
+1. **SIMPLE/Rhie-Chow Topics** - 4 times (2020, 2021, 2023, 2024)
+2. **Crank-Nicolson Discretization** - 3 times (2020, 2024, 2025)
+3. **Wall Function Source Terms** - 3 times (2020, 2022, 2024)
+4. **Time Discretization Details** - 3 times (2021, 2022, 2023)
+5. **TDMA/Matrix Structure** - 3 times (2023, 2024, 2025)
+
+**🆕 Emerging Trends (Back-to-Back 2024-2025):**
+- Rhie-Chow at Boundary
+- Fully Developed Outlet BC
+
+**📊 See full analysis:** [REPEATED_QUESTIONS_ANALYSIS.md](Notes/REPEATED_QUESTIONS_ANALYSIS.md)
 
 ---
 
